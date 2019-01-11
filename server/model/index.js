@@ -18,7 +18,7 @@ const CONFIG = require('./config');
 
 const sequelize = new Sequelize(CONFIG.database, CONFIG.user, CONFIG.password, {
     host: CONFIG.host,
-    dialect: 'mysql',
+    dialect: CONFIG.dialect,
 
     pool: {
         max: 5,

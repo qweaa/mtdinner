@@ -5,21 +5,22 @@ const resp = require('../config').respond
 const utils = require('../public/utils')
 const Sequelize = require('sequelize');
 
-const User = conn.define('user', {
+const Admin = conn.define('admin', {
     ID: {
         type: Sequelize.INTEGER,
         primaryKey: true,
     },
     NickName: Sequelize.STRING,
-    UserName: Sequelize.STRING,
+    AdminName: Sequelize.STRING,
     Password: Sequelize.STRING,
-    DefaultIP: Sequelize.STRING,
+    LoginTime: Sequelize.STRING,
+    LogoutTime: Sequelize.STRING,
     IPs: Sequelize.STRING,
+    DefaultIP: Sequelize.STRING,
     CreateTime: Sequelize.STRING,
-    Status: Sequelize.INTEGER,
 });
 
-const CheckUserExist = ({key, res, password}) => {
+const CheckAdminExist = ({key, res, password}) => {
     return new Promise((resolve, reject)=>{
         let attributes = password ? '' : { exclude: ['Password'] }
         const respond = JSON.parse(JSON.stringify(resp))
@@ -27,7 +28,7 @@ const CheckUserExist = ({key, res, password}) => {
             reject('缺少参数，用户不存在')
         }else{
             const Op = Sequelize.Op;
-            User.findOne({
+            Admin.findOne({
                 attributes: attributes,
                 where: {
                     [Op.or]: [{ID: key}, {NickName: key}]
@@ -49,15 +50,15 @@ const CheckUserExist = ({key, res, password}) => {
     })
 }
 
-//取用户列表
-router.get('/GetUserList',(req,res)=>{
+//取管理员列表
+router.get('/GetAdminList',(req,res)=>{
     const respond = JSON.parse(JSON.stringify(resp))
 
     const query = Object.assign({
         Current_Page: 1,
         Current_Size: 10,
     }, req.query)
-
+    
     let check = utils.CheckRequestKey({
         Current_Page: {
             regexp: (value)=>{
@@ -83,37 +84,35 @@ router.get('/GetUserList',(req,res)=>{
         return
     }
 
-    let Current_Page = Number(query.Current_Page)
-    let Current_Size = Number(query.Current_Size)
 
-    User.findAll({
+    Admin.findAll({
         attributes: { exclude: ['Password'] },
-        offset: Current_Size * (Current_Page - 1),
-        limit: Current_Size
+        offset: query.Current_Size * (query.Current_Page - 1),
+        limit: query.Current_Size
     }).then(data=>{
         res.json(Object.assign(respond, {
             success: true,
             data: data,
-            messages: '取用户列表成功',
+            messages: '取管理员列表成功',
         }))
     }).catch(error=>{
         res.json(Object.assign(respond, {
             data: error,
-            messages: '取用户列表错误',
+            messages: '取管理员列表失败',
         }))
     })
 })
 //取用户详细信息
-router.get('/GetUserModel',(req,res)=>{
+router.get('/GetAdminModel',(req,res)=>{
     const respond = JSON.parse(JSON.stringify(resp))
 
     const query = req.query
 
     let check = utils.CheckRequestKey({
-        User_ID: {
+        Admin_ID: {
             regexp: (value)=>{
                 if(!utils.regexp.IsNumber(value)){
-                    return 'User_ID 参数错误.Number'
+                    return 'Admin_ID参数错误.Number'
                 }
             }
         },
@@ -127,34 +126,40 @@ router.get('/GetUserModel',(req,res)=>{
         return
     }
 
-    User.findOne({
+    // if(!query.User_ID){
+    //     res.json(Object.assign(respond, {
+    //         messages: '请传入User_ID的值',
+    //     }))
+    //     return
+    // }
+
+    Admin.findOne({
         attributes: { exclude: ['Password'] },
         where: {
-            ID: query.User_ID
+            ID: query.Admin_ID
         }
     }).then(data=>{
         if(data){
             res.json(Object.assign(respond, {
                 success: true,
                 data: data,
-                messages: '取用户列表成功',
+                messages: '取管理员详情成功',
             }))
         }else{
             res.json(Object.assign(respond, {
-                messages: '用户不存在',
+                messages: '管理员不存在',
             }))
         }
     }).catch(error=>{
         res.json(Object.assign(respond, {
             data: error,
-            messages: '取用户列表失败',
+            messages: '取管理员详情失败',
         }))
     })
 })
 
-//注册用户
-router.post('/Register',(req,res)=>{
-    
+//添加管理员
+router.post('/AddAdmin',(req,res)=>{
     const respond = JSON.parse(JSON.stringify(resp))
 
     const query = req.query
@@ -167,7 +172,7 @@ router.post('/Register',(req,res)=>{
                 }
             }
         },
-        UserName: {
+        AdminName: {
             regexp: (value)=>{
                 if(!utils.regexp.IsChineseName(value)){
                     return '请使用中文名字'
@@ -191,7 +196,7 @@ router.post('/Register',(req,res)=>{
         return
     }
     
-    User.findOne({
+    Admin.findOne({
         attributes: ['ID'],
         where: {
             NickName: query.NickName
@@ -202,9 +207,9 @@ router.post('/Register',(req,res)=>{
                 messages: '昵称已存在',
             }))
         }else{
-            User.create({
+            Admin.create({
                 NickName: query.NickName,
-                UserName: query.UserName,
+                AdminName: query.AdminName,
                 Password: query.Password,
                 DefaultIP: utils.GetRequestIp(req),
                 IPs: utils.GetRequestIp(req),
@@ -214,17 +219,17 @@ router.post('/Register',(req,res)=>{
                     res.json(Object.assign(respond, {
                         success: true,
                         data: data,
-                        messages: '注册成功',
+                        messages: '添加成功',
                     }))
                 }else{
                     res.json(Object.assign(respond, {
-                        messages: '注册失败',
+                        messages: '添加失败',
                     }))
                 }
             }).catch(error=>{
                 res.json(Object.assign(respond, {
                     data: error,
-                    messages: '数据库写入用户记录异常',
+                    messages: '数据库写入管理员表记录异常',
                 }))
             })
         }
@@ -267,25 +272,33 @@ router.post('/Login',(req,res)=>{
         return
     }
     
-    User.findOne({
+    Admin.findOne({
         attributes: ['Password', 'IPs'],
         where: {
             NickName: query.NickName
         }
     }).then(findOne=>{
         if(findOne){
-            if(findOne.dataValues.Password === query.Password){
+            if(findOne.Password === query.Password){
                 let oldIPs = findOne.dataValues.IPs.split(',')
                 let ip = utils.GetRequestIp(req)
+                
                 if(oldIPs.indexOf(ip) === -1){
                     let newIPs = oldIPs.concat([ip])
-                    User.update({
-                        IPs: newIPs.join(',')
+                    Admin.update({
+                        IPs: newIPs.join(','),
+                        LoginTime: utils.GetNow()
+                    }, {
+                        where: {NickName: query.NickName}
+                    })
+                }else{
+                    Admin.update({
+                        LoginTime: utils.GetNow()
                     }, {
                         where: {NickName: query.NickName}
                     })
                 }
-
+                
                 res.json(Object.assign(respond, {
                     success: true,
                     messages: '登录成功',
@@ -297,7 +310,7 @@ router.post('/Login',(req,res)=>{
             }
         }else{
             res.json(Object.assign(respond, {
-                messages: '用户不存在',
+                messages: '管理员不存在',
             }))
         }
     }).catch(error=>{
@@ -315,10 +328,10 @@ router.post('/UpdatePassword',(req,res)=>{
     const query = req.query
 
     let check = utils.CheckRequestKey({
-        User_ID: {
+        Admin_ID: {
             regexp: (value)=>{
                 if(!utils.regexp.IsNumber(value)){
-                    return 'User_ID参数错误.Number'
+                    return 'Admin_ID参数错误.Number'
                 }
             }
         },
@@ -346,16 +359,16 @@ router.post('/UpdatePassword',(req,res)=>{
         return
     }
 
-    CheckUserExist({
-        key: query.User_ID,
+    CheckAdminExist({
+        key: query.Admin_ID,
         res: res,
         password: 1,
     }).then(data=>{
         if(data.Password === query.OldPassword){
-            User.update({
+            Admin.update({
                 Password: query.NewPassword
             }, {
-                where: {ID: query.User_ID}
+                where: {ID: query.Admin_ID}
             }).then(update=>{
                 res.json(Object.assign(respond, {
                     success: true,
@@ -386,10 +399,10 @@ router.post('/ResetPassword', (req, res)=>{
     const query = req.query
 
     let check = utils.CheckRequestKey({
-        User_ID: {
+        Admin_ID: {
             regexp: (value)=>{
                 if(!utils.regexp.IsNumber(value)){
-                    return 'User_ID参数错误.Number'
+                    return 'Admin_ID参数错误.Number'
                 }
             }
         },
@@ -410,14 +423,14 @@ router.post('/ResetPassword', (req, res)=>{
         return
     }
 
-    CheckUserExist({
-        key: query.User_ID,
+    CheckAdminExist({
+        key: query.Admin_ID,
         res: res,
     }).then(data=>{
-        User.update({
+        Admin.update({
             Password: query.Password
         }, {
-            where: {ID: query.User_ID}
+            where: {ID: query.Admin_ID}
         }).then(update=>{
             res.json(Object.assign(respond, {
                 success: true,
