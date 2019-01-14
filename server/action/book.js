@@ -14,10 +14,13 @@ const Book = conn.define('book', {
     Status: Sequelize.INTEGER,
     BookStatus: Sequelize.INTEGER,
     User_ID: Sequelize.INTEGER,
+    Store_ID: Sequelize.INTEGER,
     Year: Sequelize.INTEGER,
     Month: Sequelize.INTEGER,
     Day: Sequelize.INTEGER,
     CreateTime: Sequelize.STRING,
+    BookTime: Sequelize.STRING,
+    UpdateTime: Sequelize.STRING,
     TotalPrice: Sequelize.STRING,
     Remark: Sequelize.STRING,
     MenuList: Sequelize.STRING,
@@ -31,15 +34,22 @@ const Bookview = conn.define('bookview', {
     Status: Sequelize.INTEGER,
     BookStatus: Sequelize.INTEGER,
     User_ID: Sequelize.INTEGER,
+    Store_ID: Sequelize.INTEGER,
     Year: Sequelize.INTEGER,
     Month: Sequelize.INTEGER,
     Day: Sequelize.INTEGER,
     CreateTime: Sequelize.STRING,
+    BookTime: Sequelize.STRING,
+    UpdateTime: Sequelize.STRING,
     TotalPrice: Sequelize.STRING,
     NickName: Sequelize.STRING,
     UserName: Sequelize.STRING,
     Remark: Sequelize.STRING,
     MenuList: Sequelize.STRING,
+    StoreName: Sequelize.STRING,
+    StoreAddress: Sequelize.STRING,
+    StorePhones: Sequelize.STRING,
+    StoreStatus: Sequelize.STRING,
 });
 
 const Bookmenu = conn.define('bookmenu', {
@@ -71,7 +81,7 @@ const Menu = conn.define('menu', {
 router.get('/GetBookList',(req,res)=>{
     const respond = JSON.parse(JSON.stringify(resp))
 
-    const query = Object.assign({
+    const query = utils.Assign({
         Current_Page: 1,
         Current_Size: 10,
     }, req.query)
@@ -144,7 +154,7 @@ router.get('/GetBookDetail',(req,res)=>{
         }))
         return
     }
-
+    
     Bookview.findOne({
         where: {
             ID: query.Book_ID
@@ -153,6 +163,7 @@ router.get('/GetBookDetail',(req,res)=>{
         if(BookviewData){
             let MenuList = BookviewData.MenuList.split(',');
             Menu.findAll({
+                attributes: { exclude: ['CreateTime'] },
                 where: {
                     ID: {
                         [Op.in]: MenuList,
@@ -192,10 +203,10 @@ router.get('/GetBookDetail',(req,res)=>{
 })
 
 //提交订单
-router.get('/SubmitBook',(req,res)=>{
+router.post('/SubmitBook',(req,res)=>{
     const respond = JSON.parse(JSON.stringify(resp))
 
-    const query = Object.assign({
+    const query = utils.Assign({
         Status: 1,
         BookStatus: 1,
     }, req.query)
@@ -215,6 +226,13 @@ router.get('/SubmitBook',(req,res)=>{
             regexp: (value)=>{
                 if(!utils.regexp.IsNumber(value)){
                     return 'Status 参数错误.Number'
+                }
+            }
+        },
+        Store_ID: {
+            regexp: (value)=>{
+                if(!utils.regexp.IsNumber(value)){
+                    return 'Store_ID 参数错误.Number'
                 }
             }
         },
@@ -261,11 +279,13 @@ router.get('/SubmitBook',(req,res)=>{
             Book.create({
                 Status: Number(query.Status),
                 BookStatus: Number(query.BookStatus),
+                MenuList: query.MenuList,
                 Remark: query.Remark,
                 Year: utils.GetYear(),
                 Month: utils.GetMonth(),
                 Day: utils.GetDay(),
                 User_ID: Number(query.User_ID),
+                Store_ID: Number(query.Store_ID),
                 CreateTime: utils.GetNow(),
                 TotalPrice: TotalPrice,
             }).then(data=>{
@@ -326,19 +346,23 @@ router.get('/SubmitBook',(req,res)=>{
 })
 
 //修改订单合法性状态
-router.get('/UpdateStatus',(req,res)=>{
+router.post('/UpdateStatus',(req,res)=>{
     const respond = JSON.parse(JSON.stringify(resp))
 
-    const query = Object.assign({
-        // Status: 1,
-    }, req.query)
+    const query = req.query
 
     let check = utils.CheckRequestKey({
-        Book_ID: {},
+        Book_ID: {
+            regexp: (value)=>{
+                if(!utils.regexp.IsNumber(value)){
+                    return 'Book_ID 参数错误.Number'
+                }
+            }
+        },
         Status: {
             regexp: (value)=>{
                 if(!utils.regexp.IsNumber(value)){
-                    return 'Status参数错误.Number'
+                    return 'Status 参数错误.Number'
                 }
             }
         },
@@ -361,7 +385,8 @@ router.get('/UpdateStatus',(req,res)=>{
     }).then(findOne=>{
         if(findOne){
             Book.update({
-                Status: Number(query.Status)
+                Status: Number(query.Status),
+                UpdateTime: utils.GetNow(),
             }, {
                 where: {ID: query.Book_ID}
             }).then(update=>{
@@ -390,19 +415,23 @@ router.get('/UpdateStatus',(req,res)=>{
 
 
 //修改订单订餐状态
-router.get('/UpdateBookStatus',(req,res)=>{
+router.post('/UpdateBookStatus',(req,res)=>{
     const respond = JSON.parse(JSON.stringify(resp))
 
-    const query = Object.assign({
-        // Status: 1,
-    }, req.query)
+    const query = req.query
 
     let check = utils.CheckRequestKey({
-        Book_ID: {},
+        Book_ID: {
+            regexp: (value)=>{
+                if(!utils.regexp.IsNumber(value)){
+                    return 'Book_ID 参数错误.Number'
+                }
+            }
+        },
         BookStatus: {
             regexp: (value)=>{
                 if(!utils.regexp.IsNumber(value)){
-                    return 'Status参数错误.Number'
+                    return 'BookStatus 参数错误.Number'
                 }
             }
         },
@@ -425,7 +454,8 @@ router.get('/UpdateBookStatus',(req,res)=>{
     }).then(findOne=>{
         if(findOne){
             Book.update({
-                BookStatus: Number(query.BookStatus)
+                BookStatus: Number(query.BookStatus),
+                BookTime: utils.GetNow(),
             }, {
                 where: {ID: query.Book_ID}
             }).then(update=>{
