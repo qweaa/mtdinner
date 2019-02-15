@@ -1,3 +1,10 @@
+const resp = require('../config').respond
+
+const respond = (o)=>{
+    const respond = JSON.parse(JSON.stringify(resp))
+    return Object.assign(respond, o)
+}
+
 const regexp = {
     IsChineseName(s){
         return /^[\u2E80-\u9FFF]{2,5}$/.test(s)
@@ -52,6 +59,7 @@ const Assign = (...obj) => {
 }
 
 const utils = {
+    respond,
     regexp,
     GetNow,
     GetYear,

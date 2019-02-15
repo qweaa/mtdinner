@@ -16,7 +16,7 @@
 const Sequelize = require('sequelize');
 const CONFIG = require('./config');
 
-const sequelize = new Sequelize(CONFIG.database, CONFIG.user, CONFIG.password, {
+const conn = new Sequelize(CONFIG.database, CONFIG.user, CONFIG.password, {
     host: CONFIG.host,
     dialect: CONFIG.dialect,
 
@@ -35,11 +35,14 @@ const sequelize = new Sequelize(CONFIG.database, CONFIG.user, CONFIG.password, {
     storage: 'path/to/database.sqlite'
 });
 
-sequelize.authenticate().then(() => {
+conn.authenticate().then(() => {
     console.log('数据库链接成功');
 }).catch(err => {
     console.error('数据库链接失败', err);
 });
 
 
-module.exports = sequelize
+module.exports = {
+    conn,
+    Sequelize
+}

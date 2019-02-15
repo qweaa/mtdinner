@@ -1,348 +1,77 @@
 const express = require('express')
 const router = express.Router()
-const conn = require('../model')
 const resp = require('../config').respond
 const utils = require('../public/utils')
-const Sequelize = require('sequelize');
-const Op = Sequelize.Op;
 
-const Book = conn.define('book', {
-    ID: {
-        type: Sequelize.INTEGER,
-        primaryKey: true,
-    },
-    Status: Sequelize.INTEGER,
-    BookStatus: Sequelize.INTEGER,
-    User_ID: Sequelize.INTEGER,
-    Store_ID: Sequelize.INTEGER,
-    Year: Sequelize.INTEGER,
-    Month: Sequelize.INTEGER,
-    Day: Sequelize.INTEGER,
-    CreateTime: Sequelize.STRING,
-    BookTime: Sequelize.STRING,
-    UpdateTime: Sequelize.STRING,
-    TotalPrice: Sequelize.STRING,
-    Remark: Sequelize.STRING,
-    MenuList: Sequelize.STRING,
-});
-
-const Bookview = conn.define('bookview', {
-    ID: {
-        type: Sequelize.INTEGER,
-        primaryKey: true,
-    },
-    Status: Sequelize.INTEGER,
-    BookStatus: Sequelize.INTEGER,
-    User_ID: Sequelize.INTEGER,
-    Store_ID: Sequelize.INTEGER,
-    Year: Sequelize.INTEGER,
-    Month: Sequelize.INTEGER,
-    Day: Sequelize.INTEGER,
-    CreateTime: Sequelize.STRING,
-    BookTime: Sequelize.STRING,
-    UpdateTime: Sequelize.STRING,
-    TotalPrice: Sequelize.STRING,
-    NickName: Sequelize.STRING,
-    UserName: Sequelize.STRING,
-    Remark: Sequelize.STRING,
-    MenuList: Sequelize.STRING,
-    StoreName: Sequelize.STRING,
-    StoreAddress: Sequelize.STRING,
-    StorePhones: Sequelize.STRING,
-    StoreStatus: Sequelize.STRING,
-});
-
-const Bookmenu = conn.define('bookmenu', {
-    ID: {
-        type: Sequelize.INTEGER,
-        primaryKey: true,
-    },
-    Book_ID: Sequelize.INTEGER,
-    Menu_ID: Sequelize.INTEGER,
-});
-
-const Menu = conn.define('menu', {
-    ID: {
-        type: Sequelize.INTEGER,
-        primaryKey: true,
-    },
-    MenuName: Sequelize.STRING,
-    Status: Sequelize.INTEGER,
-    Month: Sequelize.STRING,
-    Week: Sequelize.STRING,
-    Day: Sequelize.STRING,
-    Price: Sequelize.INTEGER,
-    IsComment: Sequelize.INTEGER,
-    CreateTime: Sequelize.STRING,
-    Store_ID: Sequelize.INTEGER,
-});
+const BookviewFun = require('../model/bookview/fun')
+const MenuFun = require('../model/menu/fun')
+const BookFun = require('../model/book/fun')
+const Book = require('../model/book/index')
 
 //取订单列表
 router.get('/GetBookList',(req,res)=>{
-    const respond = JSON.parse(JSON.stringify(resp))
-
-    const query = utils.Assign({
-        Current_Page: 1,
-        Current_Size: 10,
-    }, req.query)
-
-    let check = utils.CheckRequestKey({
-        Current_Page: {
-            regexp: (value)=>{
-                if(!utils.regexp.IsNumber(value)){
-                    return 'Current_Page参数错误.Number'
-                }
-            }
-        },
-        Current_Size: {
-            regexp: (value)=>{
-                if(!utils.regexp.IsNumber(value)){
-                    return 'Current_Size参数错误.Number'
-                }
-            }
-        },
-    }, query)
-    
-    if(!check.success){
-        res.json(Object.assign(respond, {
-            data: check,
-            messages: '参数错误',
-        }))
-        return
-    }
-
-    let Current_Page = Number(query.Current_Page)
-    let Current_Size = Number(query.Current_Size)
-
-    Bookview.findAll({
-        offset: Current_Size * (Current_Page - 1),
-        limit: Current_Size
-    }).then(data=>{
-        res.json(Object.assign(respond, {
-            success: true,
-            data: data,
-            messages: '取订单列表成功',
-        }))
-    }).catch(error=>{
-        res.json(Object.assign(respond, {
-            data: error,
-            messages: '取订单列表失败',
-        }))
-    })
+    (async ()=>{
+        let list = await BookviewFun.GetBookviewList(req)
+        res.json(list)
+    })()
 })
 
 //取订单详细信息
 router.get('/GetBookDetail',(req,res)=>{
-    const respond = JSON.parse(JSON.stringify(resp))
+    (async ()=>{
+        const BookviewData = await BookviewFun.GetBookviewModel(req)
 
-    const query = req.query
-
-    let check = utils.CheckRequestKey({
-        Book_ID: {
-            regexp: (value)=>{
-                if(!utils.regexp.IsNumber(value)){
-                    return 'Book_ID 参数错误.Number'
-                }
-            }
-        },
-    }, query)
-    
-    if(!check.success){
-        res.json(Object.assign(respond, {
-            data: check,
-            messages: '参数错误',
-        }))
-        return
-    }
-    
-    Bookview.findOne({
-        where: {
-            ID: query.Book_ID
+        if(!BookviewData.success){
+            res.json(BookviewData)
+            return
         }
-    }).then(BookviewData=>{
-        if(BookviewData){
-            let MenuList = BookviewData.MenuList.split(',');
-            Menu.findAll({
-                attributes: { exclude: ['CreateTime'] },
-                where: {
-                    ID: {
-                        [Op.in]: MenuList,
-                    }
-                }
-            }).then(MenuData=>{
-                if(MenuData){
-                    BookviewData.dataValues.MenuData = MenuData
-                    res.json(Object.assign(respond, {
-                        success: true,
-                        data: BookviewData,
-                        messages: '取订单详情成功',
-                    }))
-                }else{
-                    res.json(Object.assign(respond, {
-                        messages: '取订单菜单信息失败',
-                    }))
-                }
-            }).catch(error=>{
-                res.json(Object.assign(respond, {
-                    data: error,
-                    messages: '取订单菜单信息错误',
-                }))
-            })
-        }else{
-            res.json(Object.assign(respond, {
-                messages: '订单不存在',
-            }))
-        }
-    }).catch(error=>{
-        res.json(Object.assign(respond, {
-            data: error,
-            messages: '取订单基本信息错误',
-        }))
-    })
 
+        const MenuIdList = BookviewData.data.MenuList.split(',')
+
+        const MenuData = await MenuFun.GetMenuListByIds(MenuIdList)
+
+        if(!MenuData.success){
+            res.json(MenuData)
+            return
+        }
+
+        BookviewData.data.dataValues.MenuData = MenuData
+        
+        res.json(BookviewData)
+
+    })()
 })
 
 //提交订单
 router.post('/SubmitBook',(req,res)=>{
-    const respond = JSON.parse(JSON.stringify(resp))
-
-    const query = utils.Assign({
-        Status: 1,
-        BookStatus: 1,
-    }, req.query)
-
-    let check = utils.CheckRequestKey({
-        MenuList: {
-            regexp: (value)=>{
-                let MenuList = value.split(',')
-                for(let i of MenuList){
-                    if(!utils.regexp.IsNumber(i)){
-                        return 'MenuList 参数格式错误'
-                    }
-                }
-            }
-        },
-        Status: {
-            regexp: (value)=>{
-                if(!utils.regexp.IsNumber(value)){
-                    return 'Status 参数错误.Number'
-                }
-            }
-        },
-        Store_ID: {
-            regexp: (value)=>{
-                if(!utils.regexp.IsNumber(value)){
-                    return 'Store_ID 参数错误.Number'
-                }
-            }
-        },
-        BookStatus: {
-            regexp: (value)=>{
-                if(!utils.regexp.IsNumber(value)){
-                    return 'BookStatus 参数错误.Number'
-                }
-            }
-        },
-        User_ID: {
-            regexp: (value)=>{
-                if(!utils.regexp.IsNumber(value)){
-                    return 'User_ID 参数错误.Number'
-                }
-            }
-        },
-        Remark: {},
-    }, query)
-    
-    if(!check.success){
-        res.json(Object.assign(respond, {
-            data: check,
-            messages: '参数错误',
-        }))
-        return
-    }
-
-    let MenuList = query.MenuList.split(',')
-
-    Menu.findAll({
-        attributes: ['Price'],
-        where: {
-            ID: {
-                [Op.in]: MenuList,
-            }
+    (async ()=>{
+        if(!req.query || !req.query.MenuList){
+            res.json(
+                utils.respond({
+                    data: '请传入MenuList',
+                    messages: '参数错误',
+                })
+            )
         }
-    }).then(MenuData=>{
-        if(MenuData){
-            let TotalPrice = 0
-            for(let i of MenuData){
-                TotalPrice += i.Price
-            }
-            Book.create({
-                Status: Number(query.Status),
-                BookStatus: Number(query.BookStatus),
-                MenuList: query.MenuList,
-                Remark: query.Remark,
-                Year: utils.GetYear(),
-                Month: utils.GetMonth(),
-                Day: utils.GetDay(),
-                User_ID: Number(query.User_ID),
-                Store_ID: Number(query.Store_ID),
-                CreateTime: utils.GetNow(),
-                TotalPrice: TotalPrice,
-            }).then(data=>{
-                let Book_ID = data.null
-                if(data){
-                    let bulkCreateData = []
-                    for(let i of MenuList){
-                        bulkCreateData.push({
-                            Book_ID: Book_ID,
-                            Menu_ID: i,
-                        })
-                    }
+        let MenuData = await MenuFun.GetMenuListPriceByIds(req.query.MenuList.split(','))
+
+        if(!MenuData.success){
+            res.json(MenuData)
+            return
+        }
         
-                    Bookmenu.bulkCreate(bulkCreateData).then(() => { // 注意: 这里没有凭据, 然而现在你需要...
-                        return Bookmenu.findAll({
-                            where: {
-                                Book_ID: Book_ID
-                            }
-                        });
-                    }).then(Bookmenu => {
-                        // if(Bookmenu.length === bulkCreateData.length){
-                            res.json(Object.assign(respond, {
-                                success: true,
-                                data: Bookmenu,
-                                messages: '提交成功',
-                            }))
-                        // }else{
-                        //     res.json(Object.assign(respond, {
-                        //         data: Bookmenu,
-                        //         messages: '提交失败',
-                        //     }))
-                        // }
-                    })
-                }else{
-                    res.json(Object.assign(respond, {
-                        data: data,
-                        messages: '提交失败',
-                    }))
-                }
-            }).catch(error=>{
-                res.json(Object.assign(respond, {
-                    data: error,
-                    messages: '数据库写入订单记录异常',
-                }))
-            })
-        }else{
-            res.json(Object.assign(respond, {
-                messages: '订单不存在',
-            }))
+        let TotalPrice = 0
+        for(let i of MenuData.data){
+            TotalPrice += i.Price
         }
-    }).catch(error=>{
-        res.json(Object.assign(respond, {
-            data: error,
-            messages: '取订单失败',
-        }))
-    })
-    
+
+        req.query.TotalPrice = TotalPrice
+
+        let BookData = await BookFun.AddBook(req)
+
+        res.json(BookData)
+
+    })()
 })
 
 //修改订单合法性状态

@@ -1,9 +1,11 @@
 const express = require('express')
 const router = express.Router()
-const conn = require('../model')
 const resp = require('../config').respond
 const utils = require('../public/utils')
-const Sequelize = require('sequelize');
+
+const S = require('../model')
+const Sequelize = S.Sequelize;
+const conn = S.conn;
 
 const Menu = conn.define('menu', {
     ID: {
@@ -12,6 +14,7 @@ const Menu = conn.define('menu', {
     },
     MenuName: Sequelize.STRING,
     Status: Sequelize.INTEGER,
+    Year: Sequelize.STRING,
     Month: Sequelize.STRING,
     Week: Sequelize.STRING,
     Day: Sequelize.STRING,
@@ -120,30 +123,119 @@ router.get('/GetMenuList',(req,res)=>{
     })
 })
 
+//取菜单详细信息
+router.get('/GetMenuModel',(req,res)=>{
+    const respond = JSON.parse(JSON.stringify(resp))
+
+    const query = req.query
+
+    let check = utils.CheckRequestKey({
+        Menu_ID: {
+            regexp: (value)=>{
+                if(!utils.regexp.IsNumber(value)){
+                    return 'User_ID 参数错误.Number'
+                }
+            }
+        },
+    }, query)
+    
+    if(!check.success){
+        res.json(Object.assign(respond, {
+            data: check,
+            messages: '参数错误',
+        }))
+        return
+    }
+
+    Menu.findOne({
+        attributes: { exclude: ['Password'] },
+        where: {
+            ID: query.Menu_ID
+        }
+    }).then(data=>{
+        if(data){
+            res.json(Object.assign(respond, {
+                success: true,
+                data: data,
+                messages: '取菜单成功',
+            }))
+        }else{
+            res.json(Object.assign(respond, {
+                messages: '菜单不存在',
+            }))
+        }
+    }).catch(error=>{
+        res.json(Object.assign(respond, {
+            data: {
+                error,
+                messages: 'GetMenuModel 服务异常'
+            },
+            messages: '服务器异常',
+        }))
+    })
+})
+
 //添加菜单
 router.post('/AddMenu',(req,res)=>{
     const respond = JSON.parse(JSON.stringify(resp))
 
     const query = Object.assign({
         Status: 1,
-        IsComment: 0,
+        IsComment: 1,
     }, req.query)
 
-    if(Number(query.IsComment) === 0){
-        if(!query.Month){
-            res.json(Object.assign(respond, {
-                data: '非通用菜单，请传入Month值',
-                messages: '参数错误',
-            }))
-            return
+    let typeError
+
+    switch(Number(query.IsComment)){
+        case 1: 
+            break;
+        case 2: {
+            if(!query.Month){
+                typeError = Object.assign(respond, {
+                    data: '使用月份，请传入 Month 值',
+                    messages: '参数错误',
+                })
+            }
+            break
         }
-        if(!query.Day && !query.Week){
-            res.json(Object.assign(respond, {
-                data: '非通用菜单，请传入Day或者Week值',
-                messages: '参数错误',
-            }))
-            return
+        case 3: {
+            if(!query.Week){
+                typeError = Object.assign(respond, {
+                    data: '使用每周星期，请传入 Week 值',
+                    messages: '参数错误',
+                })
+            }
+            break
         }
+        case 4: {
+            if(!query.Day){
+                typeError = Object.assign(respond, {
+                    data: '使用每月几号，请传入 Day 值',
+                    messages: '参数错误',
+                })
+            }
+            break
+        }
+        case 5: {
+            if(!query.Day || !query.Year || !query.Month){
+                typeError = Object.assign(respond, {
+                    data: '使用固定日期，请传入 Year Month Day 值',
+                    messages: '参数错误',
+                })
+            }
+            break
+        }
+        default: {
+            typeError = Object.assign(respond, {
+                data: 'IsComment 值必须为1-5',
+                messages: '参数错误',
+            })
+        }
+    }
+
+    if(typeError){
+        res.json(typeError)
+        return
     }
 
     let check = utils.CheckRequestKey({
@@ -189,6 +281,7 @@ router.post('/AddMenu',(req,res)=>{
     Menu.create({
         MenuName: query.MenuName,
         Status: Number(query.Status),
+        Year: query.Year,
         Month: query.Month,
         Week: query.Week,
         Day: query.Day,

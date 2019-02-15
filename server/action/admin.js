@@ -1,15 +1,25 @@
 const express = require('express')
 const router = express.Router()
-const conn = require('../model')
-const resp = require('../config').respond
 const utils = require('../public/utils')
-const Sequelize = require('sequelize');
+// const conn = require('../model')
+// const Sequelize = require('sequelize')
+
+const S = require('../model')
+const Sequelize = S.Sequelize;
+const conn = S.conn;
+
+const config = require('../config')
+const serverConfig = config.server
+const resp = config.respond
+
+const token = require('../public/token')
 
 const Admin = conn.define('admin', {
     ID: {
         type: Sequelize.INTEGER,
         primaryKey: true,
     },
+    Avatar: Sequelize.STRING,
     NickName: Sequelize.STRING,
     AdminName: Sequelize.STRING,
     Password: Sequelize.STRING,
@@ -108,11 +118,13 @@ router.get('/GetAdminModel',(req,res)=>{
 
     const query = req.query
 
+    if(!query.Admin_ID) query.Admin_ID = query.TokenID
+
     let check = utils.CheckRequestKey({
         Admin_ID: {
             regexp: (value)=>{
                 if(!utils.regexp.IsNumber(value)){
-                    return 'Admin_ID参数错误.Number'
+                    return 'Admin_ID 参数错误.Number'
                 }
             }
         },
@@ -126,13 +138,6 @@ router.get('/GetAdminModel',(req,res)=>{
         return
     }
 
-    // if(!query.User_ID){
-    //     res.json(Object.assign(respond, {
-    //         messages: '请传入User_ID的值',
-    //     }))
-    //     return
-    // }
-
     Admin.findOne({
         attributes: { exclude: ['Password'] },
         where: {
@@ -140,6 +145,7 @@ router.get('/GetAdminModel',(req,res)=>{
         }
     }).then(data=>{
         if(data){
+            data.dataValues.Avatar = serverConfig.host + data.dataValues.Avatar
             res.json(Object.assign(respond, {
                 success: true,
                 data: data,
@@ -273,7 +279,7 @@ router.post('/Login',(req,res)=>{
     }
     
     Admin.findOne({
-        attributes: ['Password', 'IPs'],
+        attributes: ['ID', 'Password', 'IPs'],
         where: {
             NickName: query.NickName
         }
@@ -299,8 +305,17 @@ router.post('/Login',(req,res)=>{
                     })
                 }
                 
+                let t = token.SetToken(findOne.ID)
+
+                //过期时间为2小时后
+                // var expireHours = 2;
+                // res.cookie('token', t, {maxAge: expireHours * 3600 * 1000});
+
                 res.json(Object.assign(respond, {
                     success: true,
+                    data: {
+                        token: t
+                    },
                     messages: '登录成功',
                 }))
             }else{
@@ -316,7 +331,61 @@ router.post('/Login',(req,res)=>{
     }).catch(error=>{
         res.json(Object.assign(respond, {
             data: error,
-            messages: '数据库查询昵称唯一性异常',
+            messages: '服务器异常',
+        }))
+    })
+})
+
+
+//退出登录
+router.post('/Logout',(req,res)=>{
+    const respond = JSON.parse(JSON.stringify(resp))
+
+    const query = req.query
+
+    if(!query.Admin_ID) query.Admin_ID = query.TokenID
+
+    let check = utils.CheckRequestKey({
+        Admin_ID: {
+            regexp: (value)=>{
+                if(!utils.regexp.IsNumber(value)){
+                    return 'Admin_ID 参数错误.Number'
+                }
+            }
+        },
+    }, query)
+    
+    if(!check.success){
+        res.json(Object.assign(respond, {
+            data: check,
+            messages: '参数错误',
+        }))
+        return
+    }
+    
+    Admin.findOne({
+        attributes: ['ID'],
+        where: {
+            ID: query.Admin_ID
+        }
+    }).then(findOne=>{
+        if(findOne){
+            
+            res.cookie('token', '', {maxAge: 0});
+
+            res.json(Object.assign(respond, {
+                success: true,
+                messages: '退出登录成功',
+            }))
+        }else{
+            res.json(Object.assign(respond, {
+                messages: '管理员不存在',
+            }))
+        }
+    }).catch(error=>{
+        res.json(Object.assign(respond, {
+            data: error,
+            messages: '服务器异常',
         }))
     })
 })

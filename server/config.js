@@ -28,6 +28,12 @@ const CONFIG = {
         port: port,
         host: 'http://' + IPAdress + ':' + port
     },
+
+    ILLEGAL_TOKEN: 50008,             //非法token
+    ELSE_LOGIN_TOKEN: 50012,          //其他地方登录了
+    OVERDUE_TIME_TOKEN: 50014,        //token过期
+
+    TOKEN_KEY: 'Admin-Token',            //token的名称，必须与前端一致
 }
 
 module.exports = CONFIG

@@ -1,9 +1,18 @@
 const express = require('express')
 const router = express.Router()
-const conn = require('../model')
-const resp = require('../config').respond
+const config = require('../config')
 const utils = require('../public/utils')
-const Sequelize = require('sequelize');
+// const conn = require('../model')
+// const Sequelize = require('sequelize')
+
+const S = require('../model')
+const Sequelize = S.Sequelize;
+const conn = S.conn;
+
+// const serverConfig = config.server
+const resp = config.respond
+
+const token = require('../public/token')
 
 const User = conn.define('user', {
     ID: {
@@ -16,6 +25,7 @@ const User = conn.define('user', {
     DefaultIP: Sequelize.STRING,
     IPs: Sequelize.STRING,
     CreateTime: Sequelize.STRING,
+    UpdateTime: Sequelize.STRING,
     Status: Sequelize.INTEGER,
 });
 
@@ -268,7 +278,7 @@ router.post('/Login',(req,res)=>{
     }
     
     User.findOne({
-        attributes: ['Password', 'IPs'],
+        attributes: ['ID', 'Password', 'IPs'],
         where: {
             NickName: query.NickName
         }
@@ -286,6 +296,10 @@ router.post('/Login',(req,res)=>{
                     })
                 }
 
+                let t = token.SetToken(findOne.ID)
+                res.setHeader(
+                    "Set-Cookie", `token=${t};max-age=${2 * 60 * 60 * 1000}`
+                )
                 res.json(Object.assign(respond, {
                     success: true,
                     messages: '登录成功',
@@ -303,7 +317,7 @@ router.post('/Login',(req,res)=>{
     }).catch(error=>{
         res.json(Object.assign(respond, {
             data: error,
-            messages: '数据库查询昵称唯一性异常',
+            messages: '服务器异常',
         }))
     })
 })
@@ -432,6 +446,74 @@ router.post('/ResetPassword', (req, res)=>{
     }).catch((messages)=>{
         res.json(Object.assign(respond, {
             messages: messages,
+        }))
+    })
+})
+
+//修改用户状态
+router.post('/UpdateStatus',(req,res)=>{
+    const respond = JSON.parse(JSON.stringify(resp))
+
+    const query = req.query
+
+    let check = utils.CheckRequestKey({
+        User_ID: {
+            regexp: (value)=>{
+                if(!utils.regexp.IsNumber(value)){
+                    return 'User_ID 参数错误.Number'
+                }
+            }
+        },
+        Status: {
+            regexp: (value)=>{
+                if(!utils.regexp.IsNumber(value)){
+                    return 'Status 参数错误.Number'
+                }
+            }
+        },
+    }, query)
+    
+    if(!check.success){
+        res.json(Object.assign(respond, {
+            data: check,
+            messages: '参数错误',
+        }))
+        return
+    }
+    
+    
+    User.findOne({
+        attributes: ['ID'],
+        where: {
+            ID: query.User_ID
+        }
+    }).then(findOne=>{
+        if(findOne){
+            User.update({
+                Status: Number(query.Status),
+                UpdateTime: utils.GetNow(),
+            }, {
+                where: {ID: query.User_ID}
+            }).then(update=>{
+                res.json(Object.assign(respond, {
+                    success: true,
+                    messages: '设置成功',
+                }))
+            }).catch(err=>{
+                res.json(Object.assign(respond, {
+                    data: err,
+                    messages: '设置失败',
+                }))
+            })
+        }else{
+            res.json(Object.assign(respond, {
+                messages: '用户不存在',
+            }))
+        }
+    }).catch(error=>{
+        res.json(Object.assign(respond, {
+            data: error,
+            messages: '服务器异常',
         }))
     })
 })
