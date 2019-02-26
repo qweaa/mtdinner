@@ -99,6 +99,7 @@ const rules = require('./action/rules')
 const menu = require('./action/menu')
 const book = require('./action/book')
 const admin = require('./action/admin')
+const bookday = require('./action/bookday')
 
 app.use('/user',user)
 app.use('/store',store)
@@ -106,6 +107,7 @@ app.use('/rules',rules)
 app.use('/menu',menu)
 app.use('/book',book)
 app.use('/admin',admin)
+app.use('/bookday',bookday)
 
 app.get('/',(req,res)=>{
     res.send('Hello Node.js')

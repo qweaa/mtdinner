@@ -75,15 +75,6 @@ const utils = {
     },
     //检查传入的值是否为空
     CheckRequestKey(rules, obj){
-        /*
-            rules: {
-                NickName: {
-                    notRequire: true,
-                    regexp: 'IsChineseName',     // /[1]+/
-                }
-            }
-        */
-
         let res = {
             success: false,
             data: null,
@@ -102,25 +93,18 @@ const utils = {
         let rulesKeys = Object.keys(rules)
         let objKeys = Object.keys(obj)
 
-        // if(rulesKeys.length !== objKeys.length){
-            // let errorV = []
-            let emptyV = []
-            let messages = ''
-            // for(let j of objKeys){
-            //     if(rulesKeys.indexOf(j) === -1) errorV.push(j)
-            // }
-            for(let j of rulesKeys){
-                if(objKeys.indexOf(j) === -1) emptyV.push(j)
-            }
-            // if(errorV.length) messages += '可能错误参数：' + errorV.join(',') + '；'
-            if(emptyV.length) messages += '可能缺少参数：' + emptyV.join(',') + '；'
+        let emptyV = []
+        let messages = ''
+        for(let j of rulesKeys){
+            if(objKeys.indexOf(j) === -1) emptyV.push(j)
+        }
+        if(emptyV.length) messages += '可能缺少参数：' + emptyV.join(',') + '；'
 
-            if(messages !== ''){
-                return Object.assign(res, {
-                    messages: messages,
-                })
-            }
-        // }
+        if(messages !== ''){
+            return Object.assign(res, {
+                messages: messages,
+            })
+        }
 
         for(let i in rules){
             if(obj[i] === '' || obj[i] === null){
@@ -137,6 +121,36 @@ const utils = {
                             messages: regexpTips
                         })
                     }
+                }
+                if(rules[i].isNumber && !regexp.IsNumber(obj[i])){
+                    err.push({
+                        key: i,
+                        messages: i + ' 参数错误.Number'
+                    })
+                }
+                if(rules[i].isArray && !regexp.isArray(obj[i])){
+                    err.push({
+                        key: i,
+                        messages: i + ' 参数错误.Array'
+                    })
+                }
+                if(rules[i].isObject && !regexp.isObject(obj[i])){
+                    err.push({
+                        key: i,
+                        messages: i + ' 参数错误.Object'
+                    })
+                }
+                if(rules[i].HasIllegalSign && regexp.HasIllegalSign(obj[i])){
+                    err.push({
+                        key: i,
+                        messages: i + ' 参数含有非法字符'
+                    })
+                }
+                if(rules[i].isChineseName && regexp.IsChineseName(obj[i])){
+                    err.push({
+                        key: i,
+                        messages: i + ' 参数应该为2-4位中文名'
+                    })
                 }
             }
         }
