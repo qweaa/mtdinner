@@ -25,6 +25,8 @@ const Menu = conn.define('menu', {
     UpdateTime: Sequelize.STRING,
 });
 
+const MenuFun = require('../model/menuview/fun')
+
 //取菜单列表
 router.get('/GetMenuList',(req,res)=>{
     const respond = JSON.parse(JSON.stringify(resp))
@@ -241,32 +243,19 @@ router.post('/AddMenu',(req,res)=>{
     let check = utils.CheckRequestKey({
         MenuName: {},
         Status: {
-            regexp: (value)=>{
-                if(!utils.regexp.IsNumber(value)){
-                    return 'Status 参数错误.Number'
-                }
-            }
+            isNumber: true,
         },
         IsComment: {
-            regexp: (value)=>{
-                if(!utils.regexp.IsNumber(value)){
-                    return 'IsComment 参数错误.Number'
-                }
-            }
+            isNumber: true,
         },
         Store_ID: {
-            regexp: (value)=>{
-                if(!utils.regexp.IsNumber(value)){
-                    return 'Store_ID 参数错误.Number'
-                }
-            }
+            isNumber: true,
+        },
+        MenuType_ID: {
+            isNumber: true,
         },
         Price: {
-            regexp: (value)=>{
-                if(!utils.regexp.IsNumber(value)){
-                    return 'Price 参数错误.Number'
-                }
-            }
+            isNumber: true,
         },
     }, query)
     
@@ -289,6 +278,7 @@ router.post('/AddMenu',(req,res)=>{
         IsComment: Number(query.IsComment),
         Store_ID: Number(query.Store_ID),
         CreateTime: utils.GetNow(),
+        MenuType_ID: query.MenuType_ID,
     }).then(data=>{
         if(data){
             res.json(Object.assign(respond, {
@@ -477,6 +467,54 @@ router.post('/UpdateMenu', (req, res)=>{
             messages: '查询菜单错误',
         }))
     })
+})
+
+//根据多个菜单ID取菜单信息
+router.get('/GetMenuByIds',(req,res)=>{
+    (async ()=>{
+        if(!req.query || !req.query.MenuList){
+            res.json(
+                utils.respond({
+                    data: '请传入MenuList',
+                    messages: '参数错误',
+                })
+            )
+        }
+        const MenuData = await MenuFun.GetMenuListByIds(req.query.MenuList.split(','))
+
+        if(!MenuData.success){
+            res.json(MenuData)
+            return
+        }
+
+        if(!MenuData.success){
+            res.json(MenuData)
+            return
+        }
+
+        res.json(MenuData)
+
+    })()
+})
+
+//根据店铺id取菜单信息
+router.get('/GetMenuByStoreid',async (req,res)=>{
+    if(!req.query || !req.query.Store_ID){
+        res.json(
+            utils.respond({
+                data: '请传入 Store_ID',
+                messages: '参数错误',
+            })
+        )
+    }
+    const MenuData = await MenuFun.GetMenuListByStoreid(req.query.Store_ID)
+
+    if(!MenuData.success){
+        res.json(MenuData)
+        return
+    }
+
+    res.json(MenuData)
 })
 
 module.exports = router

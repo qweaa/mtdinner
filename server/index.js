@@ -108,6 +108,7 @@ app.use('/menu',menu)
 app.use('/book',book)
 app.use('/admin',admin)
 app.use('/bookday',bookday)
+app.use('/menutype',require('./action/menutype'))
 
 app.get('/',(req,res)=>{
     res.send('Hello Node.js')

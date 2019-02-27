@@ -2,7 +2,7 @@ const S = require('../index')
 const Sequelize = S.Sequelize;
 const conn = S.conn;
 
-const model = conn.define('menu', {
+const model = conn.define('menuview', {
     ID: {
         type: Sequelize.INTEGER,
         primaryKey: true,
@@ -17,6 +17,10 @@ const model = conn.define('menu', {
     CreateTime: Sequelize.STRING,
     Store_ID: Sequelize.INTEGER,
     UpdateTime: Sequelize.STRING,
+
+    MenuType_ID: Sequelize.INTEGER,
+    TypeName: Sequelize.STRING,
+    MenuTypeSummary: Sequelize.STRING,
 });
 
 module.exports = model

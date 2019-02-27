@@ -4,7 +4,7 @@ const resp = require('../config').respond
 const utils = require('../public/utils')
 
 const BookviewFun = require('../model/bookview/fun')
-const MenuFun = require('../model/menu/fun')
+const MenuFun = require('../model/menuview/fun')
 const BookFun = require('../model/book/fun')
 const Book = require('../model/book/index')
 const Bookview = require('../model/bookview/index')
@@ -277,6 +277,94 @@ router.post('/UpdateBookStatus',(req,res)=>{
                 res.json(Object.assign(respond, {
                     data: err,
                     messages: '设置失败',
+                }))
+            })
+        }else{
+            res.json(Object.assign(respond, {
+                messages: '订单不存在',
+            }))
+        }
+    }).catch(error=>{
+        res.json(Object.assign(respond, {
+            data: error,
+            messages: '数据库查订单是否存在异常',
+        }))
+    })
+})
+
+//修改订单菜单
+router.post('/UpdateBookMenus',(req,res)=>{
+    const respond = JSON.parse(JSON.stringify(resp))
+
+    const query = req.query
+
+    let check = utils.CheckRequestKey({
+        Book_ID: {
+            regexp: (value)=>{
+                if(!utils.regexp.IsNumber(value)){
+                    return 'Book_ID 参数错误.Number'
+                }
+            }
+        },
+        MenuList: {
+            regexp: (value)=>{
+                let MenuList = value.split(',')
+                for(let i of MenuList){
+                    if(!utils.regexp.IsNumber(i)){
+                        return 'MenuList 参数格式错误'
+                    }
+                }
+            }
+        },
+    }, query)
+    
+    if(!check.success){
+        res.json(Object.assign(respond, {
+            data: check,
+            messages: '参数错误',
+        }))
+        return
+    }
+    
+    
+    Book.findOne({
+        attributes: ['ID'],
+        where: {
+            ID: query.Book_ID
+        }
+    }).then(async findOne=>{
+        if(findOne){
+            
+            let MenuData = await MenuFun.GetMenuListPriceByIds(query.MenuList.split(','))
+
+            if(!MenuData.success){
+                res.json(MenuData)
+                return
+            }
+            
+            let TotalPrice = 0
+            for(let i of MenuData.data){
+                TotalPrice += i.Price
+            }
+            
+            Book.update({
+                MenuList: query.MenuList,
+                TotalPrice: TotalPrice,
+                UpdateTime: utils.GetNow(),
+            }, {
+                where: {ID: query.Book_ID}
+            }).then(update=>{
+                res.json(Object.assign(respond, {
+                    data: {
+                        TotalPrice: TotalPrice
+                    },
+                    success: true,
+                    messages: '修改菜单成功',
+                }))
+            }).catch(err=>{
+                res.json(Object.assign(respond, {
+                    data: err,
+                    messages: '服务异常，修改菜单失败',
                 }))
             })
         }else{
