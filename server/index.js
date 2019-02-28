@@ -93,22 +93,14 @@ app.all('*', function(req, res, next) {
 
 })
 
-const user = require('./action/user')
-const store = require('./action/store')
-const rules = require('./action/rules')
-const menu = require('./action/menu')
-const book = require('./action/book')
-const admin = require('./action/admin')
-const bookday = require('./action/bookday')
-
-app.use('/user',user)
-app.use('/store',store)
-app.use('/rules',rules)
-app.use('/menu',menu)
-app.use('/book',book)
-app.use('/admin',admin)
-app.use('/bookday',bookday)
-app.use('/menutype',require('./action/menutype'))
+app.use( '/user',       require('./action/user') )
+app.use( '/store',      require('./action/store') )
+app.use( '/rules',      require('./action/rules') )
+app.use( '/menu',       require('./action/menu') )
+app.use( '/book',       require('./action/book') )
+app.use( '/admin',      require('./action/admin') )
+app.use( '/bookday',    require('./action/bookday') )
+app.use( '/menutype',   require('./action/menutype') )
 
 app.get('/',(req,res)=>{
     res.send('Hello Node.js')

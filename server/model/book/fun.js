@@ -49,15 +49,16 @@ const model = {
                         }
                     }
                 },
-                Remark: {},
                 TotalPrice: {}
             }, query)
             
             if(!check.success){
-                res.json(Object.assign(respond, {
-                    data: check,
-                    messages: '参数错误',
-                }))
+                resolve(
+                    utils.respond({
+                        data: check,
+                        messages: '参数错误',
+                    })
+                )
                 return
             }
 
@@ -84,19 +85,23 @@ const model = {
                         })
                     )
                 }else{
-                    res.json(Object.assign(respond, {
-                        data: data,
-                        messages: '添加失败',
-                    }))
+                    resolve(
+                        utils.respond({
+                            data: data,
+                            messages: '添加失败',
+                        })
+                    )
                 }
             }).catch(error=>{
-                res.json(Object.assign(respond, {
-                    data: {
-                        error,
-                        messages: 'model AddBook fun error: 服务异常'
-                    },
-                    messages: '服务器异常',
-                }))
+                resolve(
+                    utils.respond({
+                        data: {
+                            error,
+                            messages: 'model AddBook fun error: 服务异常'
+                        },
+                        messages: '服务器异常',
+                    })
+                )
             })
         })
     },

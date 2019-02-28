@@ -119,6 +119,8 @@ router.get('/GetUserModel',(req,res)=>{
 
     const query = req.query
 
+    if(!query.User_ID) query.User_ID = query.TokenID
+
     let check = utils.CheckRequestKey({
         User_ID: {
             regexp: (value)=>{
@@ -297,11 +299,11 @@ router.post('/Login',(req,res)=>{
                 }
 
                 let t = token.SetToken(findOne.ID)
-                res.setHeader(
-                    "Set-Cookie", `token=${t};max-age=${2 * 60 * 60 * 1000}`
-                )
                 res.json(Object.assign(respond, {
                     success: true,
+                    data: {
+                        token: t
+                    },
                     messages: '登录成功',
                 }))
             }else{

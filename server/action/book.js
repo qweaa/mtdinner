@@ -134,6 +134,9 @@ router.post('/SubmitBook',(req,res)=>{
                 })
             )
         }
+        
+        if(!req.query.User_ID) req.query.User_ID = req.query.TokenID
+
         let MenuData = await MenuFun.GetMenuListPriceByIds(req.query.MenuList.split(','))
 
         if(!MenuData.success){
